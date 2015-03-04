@@ -921,14 +921,15 @@ local function newParser( path, tokens )
           end
           
           local vars = { 'i', 'j', 'k', 'l', 'm', 'n' }
+          out( '( function()\n' )
           
           for i, dim in ipairs( def.array.dims ) do
-            out( 'for ', vars[ i ], ' = ', dim.i, ', ', dim.j, ' do' )
+            out( '  for ', vars[ i ], ' = ', dim.i, ', ', dim.j, ' do' )
             ident()
             out( '\n' )
             
             if i ~= #def.array.dims then
-              out( class, id )
+              out( '  ', class, id )
               
               for j = 1, i do
                 out( '[ ', vars[ j ], ' ]' )
@@ -938,7 +939,7 @@ local function newParser( path, tokens )
             end
           end
           
-          out( class, id )
+          out( '  ', class, id )
           
           for i = 1, #def.array.dims do
             out( '[ ', vars[ i ], ' ]' )
@@ -948,10 +949,11 @@ local function newParser( path, tokens )
           
           for i = 1, #def.array.dims do
             unident()
-            out( '\nend' )
+            out( '\n  end' )
           end
           
           out( '\n' )
+          out( 'end )()\n' )
         end
       end
     end,
