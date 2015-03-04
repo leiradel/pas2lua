@@ -58,8 +58,8 @@ local function newLexer( source, path )
   
   local reserved = {
     'unit', ';', 'interface', 'uses', ',', 'type', '=', 'class', '(', ')',
-    ':', 'procedure', 'var',
-    'end', 'const', 'array', '[', ']', '..',
+    ':', 'procedure', 'function', 'var', 'repeat', 'until', 'trunc',
+    'end', 'const', 'array', '[', ']', '..', 'power',
     'of', 'implementation', '.', 'begin', ':=', '-', 'nil', 'true', 'false',
     'if', 'then', 'else', 'for', 'to', 'downto', 'do', 'case', 'while', 'div', 'mod',
     'not', 'initialization', '+', '*', '/', '<', '<=', '>', '>=', '<>', '$',
@@ -272,20 +272,9 @@ local function newParser( path, tokens )
         elseif token == 'ord' then
           self:match()
           self:match( '(' )
-          local id, def = self:parseId()
+          local exp = parseExp()
           self:match( ')' )
-          
-          if def then
-            if def.type == 'boolean' then
-              value = '( ' .. id .. ' and 1 or 0 )'
-            elseif def.type == 'integer' then
-              value = id
-            else
-              value = nil
-            end
-          else
-            value = nil
-          end
+          value = 'compat_ord( ' .. exp .. ' )'
         elseif token == 'odd' then
           self:match()
           self:match( '(' )
@@ -298,6 +287,20 @@ local function newParser( path, tokens )
           local exp = parseExp()
           self:match( ')' )
           value = 'string.char( ' .. exp .. ' )'
+        elseif token == 'trunc' then
+          self:match()
+          self:match( '(' )
+          local exp = parseExp()
+          self:match( ')' )
+          value = 'math.floor( ' .. exp .. ' )'
+        elseif token == 'power' then
+          self:match()
+          self:match( '(' )
+          local base = parseExp()
+          self:match( ',' )
+          local exp = parseExp()
+          self:match( ')' )
+          value = '( ( ' .. base .. ' ) ^ ( ' .. exp .. ' ) )'
         elseif token == 'random' then
           self:match()
           self:match( '(' )
@@ -330,13 +333,20 @@ local function newParser( path, tokens )
       end
       
       local parseMultiply = function()
-        local ops = { [ '*' ] = '*', [ '/' ] = '/', [ 'div' ] = '//', [ 'mod' ] = '%', [ 'and' ] = 'and' }
+        local ops = { [ '*' ] = '*', [ '/' ] = '/', [ 'div' ] = '//', [ 'mod' ] = '%', [ 'and' ] = true }
         local value = parseUnary()
         local token = self:token()
         
         while ops[ token ] do
+          local op = token
           self:match()
-          value = '( ' .. value .. ' ' .. ops[ token ] .. ' ' .. parseUnary() .. ' )'
+          
+          if op == 'and' then
+            value = 'compat_and( ' .. value .. ', ' .. parseUnary() .. ' )'
+          else
+            value = '( ' .. value .. ' ' .. ops[ token ] .. ' ' .. parseUnary() .. ' )'
+          end
+          
           token = self:token()
         end
         
@@ -344,15 +354,16 @@ local function newParser( path, tokens )
       end
       
       local parseAdd = function()
-        local ops = { [ '+' ] = '+', [ '-' ] = '-', [ 'or' ] = 'or', [ 'xor' ] = true }
+        local ops = { [ '+' ] = '+', [ '-' ] = '-', [ 'or' ] = true, [ 'xor' ] = '~' }
         local value = parseMultiply()
         local token = self:token()
         
         while ops[ token ] do
+          local op = token
           self:match()
           
-          if token == 'xor' then
-            value = 'bit32.bxor( ' .. value .. ', ' .. parseMultiply(), ' )'
+          if op == 'or' then
+            value = 'compat_or( ' .. value .. ', ' .. parseMultiply() .. ' )'
           else
             value = '( ' .. value .. ' ' .. ops[ token ] .. ' ' .. parseMultiply() .. ' )'
           end
@@ -429,6 +440,12 @@ local function newParser( path, tokens )
             
             while self:token() ~= 'end' do
               self:match( 'id' )
+              
+              while self:token() == ',' do
+                self:match()
+                self:match( 'id' )
+              end
+              
               self:match( ':' )
               self:match( 'id' )
               self:maybe( ';' )
@@ -590,6 +607,17 @@ local function newParser( path, tokens )
         self:parseStatement()
         unident()
         out( '\nend\n' )
+      elseif token == 'repeat' then
+        self:match()
+        ident()
+        out( 'repeat\n' )
+        while self:token() ~= 'until' do
+          self:parseStatement()
+        end
+        unident()
+        self:match( 'until' )
+        local cond = self:parseExpression()
+        out( '\nuntil ', cond, '\n' )
       elseif token == 'inc' or token == 'dec' then
         self:match()
         self:match( '(' )
@@ -634,8 +662,16 @@ local function newParser( path, tokens )
       end
     end,
     
-    parseProcedure = function( self )
-      self:match( 'procedure' )
+    parseProcedureOrFunction = function( self )
+      local is_function = true
+      
+      if self:token() == 'function' then
+        self:match()
+      else
+        self:match( 'procedure' )
+        is_function = false
+      end
+      
       self.locals = {}
       ident()
       
@@ -704,6 +740,16 @@ local function newParser( path, tokens )
         out( '()\n' )
       end
       
+      if is_function then
+        self:match( ':' )
+        local type = self:lexeme():lower()
+        self:match( 'id' )
+        
+        if not self.types[ type ] then
+          self:error( 'Unknown type ', type )
+        end
+      end
+      
       self:match( ';' )
       
       if self:token() == 'var' then
@@ -745,14 +791,22 @@ local function newParser( path, tokens )
     
     parseClassDecls = function( self )
       while self:token() ~= 'end' do
-        if self:token() == 'procedure' then
-          self:match()
+        if self:token() == 'procedure' or self:token() == 'function' then
+          local is_function = true
+          
+          if self:token() == 'function' then
+            self:match()
+          else
+            self:match( 'procedure' )
+            is_function = false
+          end
+          
           local id = self:lexeme():lower()
           self.class.props[ id ] = { prop = self.class.id .. '_', type = 'procedure' }
-          out( 'local ', self.class.id, '_', id, ' -- procedure\n' )
+          out( 'local ', self.class.id, '_', id, ' -- ', ( is_function and 'function' or 'procedure' ), '\n' )
           self:match( 'id' )
           
-          if self:token() ~= ';' then
+          if self:token() == '(' then
             self:match( '(' )
             
             while true do
@@ -776,6 +830,16 @@ local function newParser( path, tokens )
                 self:match( ')' )
                 break
               end
+            end
+          end
+          
+          if is_function then
+            self:match( ':' )
+            local type = self:lexeme():lower()
+            self:match( 'id' )
+            
+            if not self.types[ type ] then
+              self:error( 'Unknown type ', type )
             end
           end
             
@@ -1012,8 +1076,8 @@ local function newParser( path, tokens )
       end
       
       while true do
-        if self:token() == 'procedure' then
-          self:parseProcedure()
+        if self:token() == 'procedure' or self:token() == 'function' then
+          self:parseProcedureOrFunction()
         else
           break
         end
@@ -1068,7 +1132,31 @@ local function newParser( path, tokens )
       out( '  end\n' )
       out( '}\n\n' )
       
-      out( 'local fsound_all = {}\n\n' )
+      out( 'local compat_ord = function( x )\n' )
+      out( '  if type( x ) == \'boolean\' then\n' )
+      out( '    return x and 1 or 0\n' )
+      out( '  elseif type( x ) == \'number\' then\n' )
+      out( '    return x\n' )
+      out( '  end\n' )
+      out( 'end\n\n' )
+      
+      out( 'local compat_and = function( x, y )\n' )
+      out( '  if type( x ) == \'number\' then\n' )
+      out( '    return x & y\n' )
+      out( '  elseif type( x ) == \'number\' then\n' )
+      out( '    return x and y\n' )
+      out( '  end\n' )
+      out( 'end\n\n' )
+      
+      out( 'local compat_or = function( x, y )\n' )
+      out( '  if type( x ) == \'number\' then\n' )
+      out( '    return x | y\n' )
+      out( '  elseif type( x ) == \'number\' then\n' )
+      out( '    return x or y\n' )
+      out( '  end\n' )
+      out( 'end\n\n' )
+      
+      out( 'local fsound_all, fsound_free = {}, {}\n\n' )
       out( 'local fsound_playsound = function( arg1, sound )\n' )
       out( '  sound:play()\n' )
       out( 'end\n\n' )
