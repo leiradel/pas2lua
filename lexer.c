@@ -410,76 +410,6 @@ int next_token( lua_State* L )
   if ( is_decimal( *self->current ) )
   {
     int real = *self->current == '.' && self->current[ 1 ] != '.';
-    
-    // Check for hexadecimal, binary and octal numbers.
-    if ( *self->current == '0' )
-    {
-      // skip the leading zero...
-      skip( self );
-
-      if ( tolower( *self->current ) == 'x' )
-      {
-        // Grab the hexadecimal number.
-        skip( self );
-
-        if ( is_hexa( *self->current ) )
-        {
-          do
-          {
-            skip( self );
-          }
-          while ( is_hexa( *self->current ) );
-        }
-        else
-        {
-          char string[ 2 ] = { *self->current, 0 };
-          return raise_error( L, self, "Invalid hexadecimal digit: '%c'", string );
-        }
-        
-        goto suffix;
-      }
-      else if ( tolower( *self->current ) == 'b' )
-      {
-        skip( self );
-        
-        if ( is_binary( *self->current ) )
-        {
-          do
-          {
-            skip( self );
-          }
-          while ( is_binary( *self->current ) );
-        }
-        else
-        {
-          char string[ 2 ] = { *self->current, 0 };
-          return raise_error( L, self, "Invalid binary digit: '%c'", string );
-        }
-        
-        goto suffix;
-      }
-      else // octal
-      {
-        if ( self->octals )
-        {
-          while ( is_octal( *self->current ) )
-          {
-            skip( self );
-          }
-          
-          goto suffix;
-        }
-        else
-        {
-          while ( is_decimal( *self->current ) )
-          {
-            skip( self );
-          }
-          
-          goto go_on;
-        }
-      }
-    }
 
     do
     {
@@ -487,7 +417,6 @@ int next_token( lua_State* L )
     }
     while ( is_decimal( *self->current ) );
     
-go_on:
     if ( !real && *self->current == '.' && self->current[ 1 ] != '.' )
     {
       real = 1;
@@ -516,34 +445,6 @@ go_on:
       }
     }
     
-    if ( real )
-    {
-      char k = tolower( *self->current );
-      
-      if ( k == 'f' || k == 'l' )
-      {
-        skip( self );
-      }
-    }
-    else
-    {
-suffix:
-      if ( tolower( *self->current ) == 'u' )
-      {
-        skip( self );
-        
-        if ( tolower( *self->current ) == 'l' )
-        {
-          skip( self );
-          
-          if ( tolower( *self->current ) == 'l' )
-          {
-            skip( self );
-          }
-        }
-      }
-    }
-
     lua_pushlstring( L, start, self->current - start );
     
     if ( real )
@@ -555,6 +456,39 @@ suffix:
       lua_pushliteral( L, "integer" );
     }
     
+    return push_result( L, self, -2, -1 );
+  }
+  
+  // Hexadecimal constants.
+  if ( *self->current == '$' )
+  {
+    int x = 0;
+    skip( self );
+
+    if ( is_hexa( *self->current ) )
+    {
+      do
+      {
+        int d = tolower( *self->current ) - '0';
+        
+        if ( d > 9 )
+        {
+          d -= 'a' - '0' + 10;
+        }
+        
+        x = x * 16 + d;
+        skip( self );
+      }
+      while ( is_hexa( *self->current ) );
+    }
+    else
+    {
+      char string[ 2 ] = { *self->current, 0 };
+      return raise_error( L, self, "Invalid hexadecimal digit: '%c'", string );
+    }
+    
+    lua_pushfstring( L, "%d", x );
+    lua_pushliteral( L, "integer" );
     return push_result( L, self, -2, -1 );
   }
 
