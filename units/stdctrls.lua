@@ -36,5 +36,13 @@ return {
         type = 'tfont'
       }
     }
+  },
+  tscrollbar = {
+    type = 'tscrollbar',
+    fields = {
+      visible = {
+        type = 'boolean'
+      }
+    }
   }
 }

@@ -79,6 +79,12 @@ return {
       },
       position = {
         type = 'integer'
+      },
+      horzscrollbar = {
+        type = 'tscrollbar'
+      },
+      vertscrollbar = {
+        type = 'tscrollbar'
       }
     }
   },
