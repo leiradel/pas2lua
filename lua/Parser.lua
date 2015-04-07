@@ -92,6 +92,7 @@ function M:tokenize( source, path )
     'procedure',
     'record',
     'repeat',
+    'self',
     'then',
     'to',
     'true',
@@ -1121,7 +1122,11 @@ function M:parseCallStmt( cid )
     self:match()
     
     if self:token() ~= ')' then
-      self:out( ' %s', self:parseExpr() )
+      local expr = self:parseExpr()
+      
+      if expr then
+        self:out( ' %s', expr )
+      end
       
       while self:token() == ',' do
         self:match()
@@ -1524,6 +1529,9 @@ function M:parseTerminal()
     local exp = self:parseExpr()
     self:match( ')' )
     return string.format( '( %s ^ %s )', base, exp ), { type = 'fp' }
+  elseif token == 'self' then
+    self:match()
+    return
   elseif token == 'id' then
     local cid, def = self:parseCid()
     
