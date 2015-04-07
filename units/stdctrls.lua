@@ -25,6 +25,15 @@ return {
       },
       visible = {
         type = 'boolean'
+      },
+      parentfont = {
+        type = 'boolean'
+      },
+      transparent = {
+        type = 'boolean'
+      },
+      font = {
+        type = 'tfont'
       }
     }
   }

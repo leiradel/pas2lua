@@ -119,5 +119,13 @@ return {
   vk_menu = {
     -- not sure if this should be in the forms unit
     type = 'integer'
+  },
+  vk_shift = {
+    -- not sure if this should be in the forms unit
+    type = 'integer'
+  },
+  vk_insert = {
+    -- not sure if this should be in the forms unit
+    type = 'integer'
   }
 }
