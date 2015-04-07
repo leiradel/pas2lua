@@ -76,6 +76,9 @@ return {
       },
       font = {
         type = 'tfont'
+      },
+      position = {
+        type = 'integer'
       }
     }
   },
@@ -91,6 +94,9 @@ return {
     type = 'integer'
   },
   ponone = {
+    type = 'integer'
+  },
+  poscreencenter = {
     type = 'integer'
   },
   bisystemmenu = {
