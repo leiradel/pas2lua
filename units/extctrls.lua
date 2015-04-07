@@ -55,6 +55,9 @@ return {
       },
       center = {
         type = 'boolean'
+      },
+      onclick = {
+        type = 'procedure'
       }
     }
   },
