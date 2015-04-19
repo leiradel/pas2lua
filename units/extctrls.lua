@@ -58,6 +58,9 @@ return {
       },
       onclick = {
         type = 'procedure'
+      },
+      dragcursor = {
+        type = 'procedure'
       }
     }
   },

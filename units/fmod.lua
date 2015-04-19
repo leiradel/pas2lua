@@ -10,5 +10,8 @@ return {
   },
   fsound_stopsound = {
     type = 'procedure'
+  },
+  fsound_setsfxmastervolume = {
+    type = 'procedure'
   }
 }

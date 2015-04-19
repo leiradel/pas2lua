@@ -10,5 +10,8 @@ return {
   },
   crhandpoint = {
     type = 'integer'
+  },
+  crdefault = {
+    type = 'integer'
   }
 }
