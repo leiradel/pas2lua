@@ -278,20 +278,21 @@ function M:parseExpr()
   elseif token == 'comment' then
     local value = self.tokens[ self.pos ].lexeme:sub( 2, -2 ):gsub( '%s+', '' )
     local data = value:gsub( '%x%x', function( hex ) return string.char( tonumber( hex, 16 ) ) end )
-    local name = table.concat( self.cid, '_' ) .. '.bin'
+    local ext
     
-    local file, err = io.open( self.datadir .. '/' .. name, 'wb' )
-    
-    if not file then
-      self:error( 'Error opening data file: %s', err )
+    if data:sub( 2, 11 ) == 'TJPEGImage' then
+      ext = '.rle'
+    elseif data:sub( 2, 8 ) == 'TBitmap' then
+      ext = '.rle'
+    else
+      errorout( 'unknown data type' )
     end
     
-    file:write( data )
-    file:close()
+    local name = table.concat( self.cid, '_' )
     
     self:out( 'id', 'loadbin' )
     self:out( '(', '(' )
-    self:out( 'string', name )
+    self:out( 'string', name .. ext )
     self:out( ')', ')' )
     
     self:match()
