@@ -57,6 +57,7 @@ function M:tokenize( source, path )
     '[',
     ']',
     -- keywords
+    'abs',
     'and',
     'array',
     'begin',
@@ -1521,6 +1522,12 @@ function M:parseTerminal()
     local value = self:parseExpr()
     self:match( ')' )
     return string.format( 'math.floor%s', value ), { type = 'integer' }
+  elseif token == 'abs' then
+    self:match()
+    self:match( '(' )
+    local value = self:parseExpr()
+    self:match( ')' )
+    return string.format( 'math.abs%s', value ), { type = 'integer' }
   elseif token == 'power' then
     self:match()
     self:match( '(' )
