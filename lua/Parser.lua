@@ -751,6 +751,8 @@ function M:parseVarSection()
         end
         
         self:outln()
+      elseif def.type == 'record' then
+        self:outln( '%s%s = {} -- record', self:declaration(), id )
       else
         self:outln( '%s%s = %s%s()', self:declaration(), id, self:declared( def.type ), def.type )
       end
