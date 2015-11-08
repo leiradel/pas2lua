@@ -3,8 +3,8 @@
 CC=gcc
 CPP=g++
 
-CFLAGS+=-O0 -g -I/c/Users/aleirade/dropbox/MinGW_home/lua-5.2.0/src
-LFLAGS+=-g -L/c/Users/aleirade/dropbox/MinGW_home/lua-5.2.0/src
+CFLAGS+=-O0 -g -I/c/Users/aleirade/Desktop/MinGW_home/lua-5.2.0/src
+LFLAGS+=-g -L/c/Users/aleirade/Desktop/MinGW_home/lua-5.2.0/src
 
 .c.o:
 	$(CC) $(CFLAGS) -o $@ -c $<
