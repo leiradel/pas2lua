@@ -182,9 +182,9 @@ function M:error( ... )
   local args = { ... }
   local format = args[ 1 ]
   table.remove( args, 1 )
-  --io.stderr:write( string.format( '%s:%d: %s\n', self.tokens[ self.pos ].source, self.tokens[ self.pos ].line, string.format( format, unpack( args ) ) ) )
+  --io.stderr:write( string.format( '%s:%d: %s\n', self.tokens[ self.pos ].source, self.tokens[ self.pos ].line, string.format( format, table.unpack( args ) ) ) )
   --os.exit( 1 )
-  error( string.format( '%s:%d: %s\n', self.tokens[ self.pos ].source, self.tokens[ self.pos ].line, string.format( format, unpack( args ) ) ) )
+  error( string.format( '%s:%d: %s\n', self.tokens[ self.pos ].source, self.tokens[ self.pos ].line, string.format( format, table.unpack( args ) ) ) )
 end
 
 function M:pushFilter( pattern, sub )
@@ -196,7 +196,7 @@ function M:popFilter()
 end
 
 function M:format( format, args )
-  local str = string.format( format, unpack( args ) )
+  local str = string.format( format, table.unpack( args ) )
   
   for i = #self.filters, 1, -1 do
     str = str:gsub( self.filters[ i ].pattern, self.filters[ i ].sub )
@@ -1517,19 +1517,19 @@ function M:parseTerminal()
     self:match( '(' )
     local value = self:parseExpr()
     self:match( ')' )
-    return string.format( 'string.char%s', value ), { type = 'char' }
+    return string.format( '( string.char%s )', value ), { type = 'char' }
   elseif token == 'trunc' then
     self:match()
     self:match( '(' )
     local value = self:parseExpr()
     self:match( ')' )
-    return string.format( 'math.floor%s', value ), { type = 'integer' }
+    return string.format( '( math.floor%s )', value ), { type = 'integer' }
   elseif token == 'abs' then
     self:match()
     self:match( '(' )
     local value = self:parseExpr()
     self:match( ')' )
-    return string.format( 'math.abs%s', value ), { type = 'integer' }
+    return string.format( '( math.abs%s )', value ), { type = 'integer' }
   elseif token == 'power' then
     self:match()
     self:match( '(' )
@@ -1547,7 +1547,7 @@ function M:parseTerminal()
     if self:token() == 'in' then
       self:match()
       local cid2, def2 = self:parseCid()
-      return string.format( '%s[ %s%s ]', cid2, self:declared( cid2 ), cid ), { type = 'boolean' }
+      return string.format( '( %s[ %s%s ] )', cid2, self:declared( cid2 ), cid ), { type = 'boolean' }
     elseif self:token() == '(' then
       self:match()
       local args = { ( self:parseExpr() ) }
@@ -1558,11 +1558,11 @@ function M:parseTerminal()
       end
       
       self:match( ')' )
-      return string.format( '%s( %s )', cid, table.concat( args, ', ' ) ), { type = def.type }
+      return string.format( '( %s( %s ) )', cid, table.concat( args, ', ' ) ), { type = def.type }
     elseif def.type == 'function' then
-      return string.format( '%s()', cid ), def
+      return string.format( '( %s() )', cid ), def
     else
-      return cid, def
+      return string.format( '( %s )', cid ), def
     end
   elseif token == '[' then
     self:match()
@@ -1578,12 +1578,12 @@ function M:parseTerminal()
     end
     
     self:match( ']' )
-    return string.format( '{ %s }', table.concat( value, ', ' ) ), { type = 'set' }
+    return string.format( '( { %s } )', table.concat( value, ', ' ) ), { type = 'set' }
   elseif token == '(' then
     self:match()
     local value, def = self:parseExpr()
     self:match( ')' )
-    return value, def
+    return string.format( '( %s )', value ), def
   end
   
   self:error( '%s is invalid in expressions', token )

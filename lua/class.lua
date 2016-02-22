@@ -25,7 +25,7 @@ local M = {}
 local pairs = pairs
 local type = type
 local sub = string.sub
-local unpack = unpack
+local unpack = table.unpack
 local setmetatable = setmetatable
 local _G = _G
 

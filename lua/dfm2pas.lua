@@ -136,7 +136,7 @@ function M:error( ... )
   local args = { ... }
   local format = args[ 1 ]
   table.remove( args, 1 )
-  io.stderr:write( string.format( '%s:%d: %s\n', self.tokens[ self.pos ].source, self.tokens[ self.pos ].line, string.format( format, unpack( args ) ) ) )
+  io.stderr:write( string.format( '%s:%d: %s\n', self.tokens[ self.pos ].source, self.tokens[ self.pos ].line, string.format( format, table.unpack( args ) ) ) )
   os.exit( 1 )
 end
 
